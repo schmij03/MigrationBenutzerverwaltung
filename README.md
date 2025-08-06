@@ -1,102 +1,99 @@
-#  User Provisioning mittels Abacus REST-API
+# User Provisioning mittels Abacus REST-API
 
-Ein Python-basiertes Toolset zur Automatisierung von Benutzer-, Passwort- und Policy-Provisionierung über die Abacus REST-API, inklusive Authentifizierung via OAuth2.
+Ein Python-basiertes Toolkit zur Automatisierung der Benutzer-, Passwort-
+und Policy-Verwaltung über die Abacus REST-API. Alle Skripte
+authentifizieren sich über OAuth2 und teilen sich zentrale Hilfsfunktionen.
 
 ## Projektstruktur
 
 ```
---- CreateCategory.py              # Erstellt neue Kategorien via API
---- CreateClientPolicy.py         # Erstellt Client-spezifische Policies
---- CreateProgramPolicy.py        # Erstellt programmbezogene Policies
---- CreateUsers.py                # Erstellt Benutzer:innen asynchron
---- ModifyPassword.py             # Ändert Passwörter bestehender Benutzer:innen
---- ModifyUsers.py                # Aktualisiert Benutzerinformationen
---- auth/
-    --- Authentification.py       # OAuth2-Authentifizierung und Tokenverwaltung
-    --- ClientSecret.txt          # Sensible Zugangsdaten (nicht versionieren!)
---- data/
-    --- OBT_Export_*.json/xlsx    # Eingabedaten für die Skripte
-    --- results/
-        --- *.xlsx                # Ergebnis- und Duplikatsdateien
---- requirements.txt              # Python-Abhängigkeiten
---- .gitignore                    # Ignoriert sensible/temporäre Dateien
+creation.py                 # führt alle Erstellungs- und Änderungs-Module sequenziell aus
+deletion.py                 # führt die Lösch-Module sequenziell aus
+utils/
+    auth/                   # OAuth2-Authentifizierung und Tokenverwaltung
+    Creation/               # Module zum Erstellen von Kategorien, (Service-)Benutzern und Policies
+    Modification/           # Module zum Ändern von Benutzern und Passwörtern
+    Delete/                 # Module zum Löschen von Benutzern, Policies und Kategorien
+requirements.txt            # Python-Abhängigkeiten
 ```
+
+Eingabedateien werden im Verzeichnis `_data/` erwartet. Ergebnisse und
+Duplikate landen in `_data/results/`.
 
 ## Setup & Installation
 
 1. **Repository klonen und Abhängigkeiten installieren:**
 
-```bash
-git clone <repository-url>
-cd <projektverzeichnis>
-python -m venv venv
-source venv/bin/activate  # (Windows: venv\Scripts\activate)
-pip install -r requirements.txt
-```
+   ```bash
+   git clone <repository-url>
+   cd <projektverzeichnis>
+   python -m venv venv
+   source venv/bin/activate  # (Windows: venv\Scripts\activate)
+   pip install -r requirements.txt
+   ```
 
 2. **Zugangsdaten einrichten:**
 
-Im Ordner `auth/` muss die Datei `ClientSecret.txt` mit folgendem Aufbau vorhanden sein:
+   Im Ordner `utils/auth/` muss die Datei `ClientSecret.txt` mit folgendem
+   Aufbau vorhanden sein:
 
-```
-<client_id>
-<client_secret>
-<base_url>  # z.?B. http://localhost:40000
-```
-> ####   Achtung: Diese Datei sollte niemals in ein öffentliches Repository gelangen!
+   ```
+   <client_id>
+   <client_secret>
+   <base_url>  # z.B. http://localhost:40000
+   ```
 
-
+   > Diese Datei darf nicht in ein öffentliches Repository gelangen!
 
 ## Nutzung
-> #### Die Reihenfolge der Schritte muss beachtet werden.
 
-### 1. AbaReports exportieren und in data directory kopieren
-Um die Python Files ausführen zu können, müssen zuerst die Exporte, welche mittels AbaReport erfolgen, in den Ordner "data" kopiert werden. 
+1. **AbaReports exportieren und in `_data/` ablegen.**
 
-### 2. Benutzerkategorien erstellen
-```bash
-python CreateCategory.py
-```
+2. **Erstellungs- und Änderungs-Workflow ausführen:**
 
-Verwendet `data/OBT_Export_Create_Categories.json`.
+   ```bash
+   python creation.py
+   ```
 
-### 3. Benutzer erstellen
+   Das Skript führt nacheinander folgende Module aus:
 
-```bash
-python CreateUsers.py
-```
+   - `utils.Creation.CreateCategory`
+   - `utils.Creation.CreateServiceUsers`
+   - `utils.Creation.CreateUsers`
+   - `utils.Modification.ModifyPassword`
+   - `utils.Modification.ModifyUsers`
+   - `utils.Creation.CreateProgramPolicy`
+   - `utils.Creation.CreateClientPolicy`
 
-Verwendet `data/OBT_Export_Create_Users.json` und speichert Ergebnisse in `data/results/`.
+   Die Erstellung und Aktualisierung von Benutzern erfolgt asynchron und
+   begrenzt parallele Requests für einen effizienteren Ablauf.
 
-### 4. Benutzerinformationen ändern
+3. **Lösch-Workflow ausführen:**
 
-```bash
-python ModifyUsers.py
-```
-Verwendet `data/OBT_Export_Modify_Users.json` und speichert Ergebnisse in `data/results/`.
+   ```bash
+   python deletion.py
+   ```
 
-### 5. Passwort ändern
+   Führt die Module `DeleteUsers`, `DeleteProgrammPolicies`,
+   `DeleteClientPolicies` und `DeleteCategories` aus.
 
-```bash
-python ModifyPassword.py
-```
-Verwendet `data/OBT_Export_Modify_Passwords_Users.xlsx`
+4. **Einzelne Module starten:**
 
+   ```bash
+   python -m utils.Creation.CreateUsers
+   ```
 
-### 6. Policies erstellen
-
-```bash
-python CreateClientPolicy.py
-python CreateProgramPolicy.py
-```
-Verwendet `data/OBT_Export_Create_ClientPolicies.xlsx` und `data/OBT_Export_Create_ProgrammPolicies.xlsx`
+   Dies ist für jedes Modul in `utils/` möglich.
 
 ## API & Authentifizierung
 
-Alle Skripte nutzen zentrale Authentifizierungsmethoden aus `auth/Authentification.py`, um einen Bearer Token über OAuth2 zu erhalten. Die Basis-URL und Credentials werden aus `ClientSecret.txt` gelesen.
+Alle Module verwenden die Funktionen aus `utils/auth/Authentification.py`,
+um einen OAuth2-Bearer-Token zu erhalten. Die Basis-URL und Credentials
+werden aus `ClientSecret.txt` gelesen.
 
 ## Hinweise
 
-- Eingabedaten sind in `data/`, meist als `.json` oder `.xlsx`.
-- Ergebnisse und mögliche Duplikate landen in `data/results/`.
-- Skripte loggen ausführlich via `logging`.
+- Eingabedaten liegen in `_data/` (JSON oder XLSX).
+- Ergebnisse und Duplikatslisten werden in `_data/results/` gespeichert.
+- Skripte loggen ausführlich über das Python-`logging`-Modul.
+
