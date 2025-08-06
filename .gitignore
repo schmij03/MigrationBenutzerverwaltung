@@ -1,0 +1,9 @@
+__pycache__/
+.vscode/
+venv/
+old_files/
+/auth/ClientSecret.txt
+data/
+auth/ClientSecret.txt
+_data/
+utils/auth/ClientSecret.txt
